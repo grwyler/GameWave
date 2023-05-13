@@ -1,30 +1,27 @@
 import React, { useState, useEffect } from "react";
 import io from "socket.io-client";
 import { useRouter } from "next/router";
+import { useDispatch, useSelector } from "react-redux";
+import { selectRooms, setRooms } from "./redux/lobbySlice";
 
 const socket = io("http://localhost:3001");
 
 const Lobby = () => {
-  const [rooms, setRooms] = useState([]);
+  const rooms = useSelector(selectRooms);
+  debugger;
   const [roomName, setRoomName] = useState("");
   const [roomCode, setRoomCode] = useState("");
   const [playerName, setPlayerName] = useState("");
 
   const router = useRouter();
+  const dispatch = useDispatch();
 
   useEffect(() => {
-    const storedName = localStorage.getItem("playerName");
     // Handle real-time updates to available rooms
     socket.on("roomsUpdated", (updatedRooms) => {
-      setRooms(updatedRooms);
+      dispatch(setRooms(updatedRooms));
     });
-
-    if (storedName) {
-      setPlayerName(storedName);
-    } else {
-      // handle the case where the player name is not set
-    } ///
-  }, []);
+  }, [dispatch]);
 
   const joinRoom = () => {
     // Send request to server to join room
@@ -39,10 +36,10 @@ const Lobby = () => {
       .then((response) => response.json())
       .then((data) => {
         if (data.success) {
-          router.push(`/game/${roomCode}`);
           localStorage.setItem("playerName", playerName);
+          router.push(`/game/${roomCode}`);
         } else {
-          // Display error message
+          //// Display error message
         }
       });
     socket.emit;
@@ -61,8 +58,8 @@ const Lobby = () => {
       .then((response) => response.json())
       .then((data) => {
         if (data.success) {
-          router.push(`/game/${data.roomCode}`);
           localStorage.setItem("playerName", playerName);
+          router.push(`/game/${data.roomCode}`);
         } else {
           // Display error message
         }

@@ -1,6 +1,9 @@
 import { useRouter } from "next/router";
 import { useState, useEffect, useCallback } from "react";
+import { Button } from "react-bootstrap";
+import { useDispatch } from "react-redux";
 import io from "socket.io-client";
+import { IoChevronBackOutline } from "react-icons/io5";
 
 const socket = io("http://localhost:3001");
 
@@ -9,6 +12,7 @@ const Game = () => {
   const { roomCode } = router.query;
   const [roomState, setRoomState] = useState(null);
   const [playerName, setPlayerName] = useState("");
+  const dispatch = useDispatch();
 
   useEffect(() => {
     const storedName = localStorage.getItem("playerName");
@@ -34,6 +38,7 @@ const Game = () => {
 
       // Listen for updates to the game state
       socket.on("gameStateUpdated", ({ success, roomState }) => {
+        debugger;
         if (success) {
           setRoomState(roomState);
         }
@@ -56,18 +61,17 @@ const Game = () => {
   const handleBeforeUnload = useCallback(
     (e) => {
       e.preventDefault();
-      const storedName = localStorage.getItem("playerName");
-      if (storedName) setPlayerName(storedName);
-      if (roomCode && playerName) {
-        debugger;
+      // const storedName = localStorage.getItem("playerName");
+      // if (storedName) setPlayerName(storedName);
+      if (roomCode && localStorage.getItem("playerName")) {
         socket.emit("leaveRoom", {
           roomCode,
-          playerName,
+          playerName: localStorage.getItem("playerName"),
         });
       }
       e.returnValue = "";
     },
-    [playerName, roomCode]
+    [roomCode]
   );
 
   useEffect(() => {
@@ -99,11 +103,21 @@ const Game = () => {
   const handleStartGame = () => {
     socket.emit("startGame");
   };
+  const handleBackToLobby = () => {
+    socket.emit("leaveRoom", {
+      roomCode,
+      playerName,
+    });
+    router.push("/");
+  };
 
   return (
     <div style={{ height: "100vh" }}>
       {roomState ? (
         <div>
+          <Button onClick={handleBackToLobby}>
+            <IoChevronBackOutline /> Back to Lobby
+          </Button>
           <h1>Game Board</h1>
           {/* Display the game board here */}
           <ul>

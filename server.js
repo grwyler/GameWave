@@ -72,12 +72,13 @@ app.post("/joinRoom", (req, res) => {
     return res.status(400).json({ error: "Invalid room code" });
   }
 
-  // Check if the player is already in the game
-  if (room.players.includes(playerName)) {
-    // If so, return the current game state without modifying it
-    return res.json({ success: true });
-  }
+  // // Check if the player is already in the game
+  // if (room.players.includes(playerName)) {
+  //   // If so, return the current game state without modifying it
+  //   return res.json({ success: true });
+  // }
 
+  // io.emit("roomsUpdated", Object.values(rooms));
   // Return the updated game state to the client
   res.json({ success: true });
 });
@@ -91,8 +92,6 @@ io.on("connection", (socket) => {
 
   // Handle joining a room
   socket.on("joinRoom", ({ roomCode, playerName }, callback) => {
-    console.log("roomCode: ", roomCode);
-    console.log("playerName: ", playerName);
     const room = rooms[roomCode];
     if (!room) {
       callback({ success: false, message: "Room not found", roomState: room });
@@ -123,6 +122,7 @@ io.on("connection", (socket) => {
   });
   socket.on("leaveRoom", ({ roomCode, playerName }) => {
     const room = rooms[roomCode];
+    console.log("room: ", room);
 
     if (room) {
       // Remove the player from the room
