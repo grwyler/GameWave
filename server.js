@@ -23,8 +23,8 @@ app.get("/", function (req, res) {
 // Serve the static files from the React app
 app.use(express.static(path.join(__dirname, "client/build")));
 
-const server = app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+const server = app.listen(port, "192.168.0.4", () => {
+  console.log(`Server running at http://192.168.0.4:${port}`);
 });
 
 const io = require("socket.io")(server, {
@@ -45,7 +45,7 @@ const rooms = {};
 
 // Express endpoint to create a new game
 app.post("/createRoom", (req, res) => {
-  const { roomName } = req.body;
+  const { roomName, playerName } = req.body;
   let roomCode;
   do {
     roomCode = Math.random().toString(36).substring(2, 8);
@@ -53,6 +53,7 @@ app.post("/createRoom", (req, res) => {
   const room = {
     code: roomCode,
     name: roomName,
+    createdBy: playerName,
     players: [],
   };
   rooms[roomCode] = room;
@@ -62,7 +63,7 @@ app.post("/createRoom", (req, res) => {
 
 // Express endpoint to join a game
 app.post("/joinRoom", (req, res) => {
-  const { roomCode, playerName } = req.body;
+  const { roomCode } = req.body;
 
   // Find the game associated with the room code
   const room = rooms[roomCode];
@@ -71,15 +72,6 @@ app.post("/joinRoom", (req, res) => {
     // Return an error if the room code is not valid
     return res.status(400).json({ error: "Invalid room code" });
   }
-
-  // // Check if the player is already in the game
-  // if (room.players.includes(playerName)) {
-  //   // If so, return the current game state without modifying it
-  //   return res.json({ success: true });
-  // }
-
-  // io.emit("roomsUpdated", Object.values(rooms));
-  // Return the updated game state to the client
   res.json({ success: true });
 });
 
@@ -95,22 +87,19 @@ io.on("connection", (socket) => {
     const room = rooms[roomCode];
     if (!room) {
       callback({ success: false, message: "Room not found", roomState: room });
-    } else if (room.players.length >= 4) {
-      callback({ success: false, message: "Room is full", roomState: room });
-    } else if (!playerName || playerName === "") {
+    } else if (
+      room.players.filter((player) => player.name === playerName).length > 0
+    ) {
       callback({
-        success: false,
-        message: "Enter a Name",
-        roomState: room,
-      });
-    } else if (room.players.includes(playerName)) {
-      callback({
-        success: false,
-        message: `Another player is already called '${playerName}`,
+        success: true,
+        message: "Player alread in room",
         roomState: room,
       });
     } else {
-      room.players.push(playerName);
+      room.players.push({
+        name: playerName,
+        isLeader: room.createdBy === playerName,
+      });
       rooms[roomCode] = room;
       io.emit("roomsUpdated", Object.values(rooms));
       callback({ success: true, message: "", roomState: room });
@@ -122,11 +111,12 @@ io.on("connection", (socket) => {
   });
   socket.on("leaveRoom", ({ roomCode, playerName }) => {
     const room = rooms[roomCode];
-    console.log("room: ", room);
 
     if (room) {
       // Remove the player from the room
-      const index = room.players.indexOf(playerName);
+      const index = room.players.findIndex(
+        (player) => player.name === playerName
+      );
       if (index !== -1) {
         room.players.splice(index, 1);
         rooms[roomCode] = room;
@@ -163,6 +153,25 @@ io.on("connection", (socket) => {
     socket.join(roomCode);
     socket.emit("playerJoined", playerName);
     socket.to(roomCode).emit("gameStateUpdated", room);
+  });
+  socket.on("setImage", ({ image, roomCode, playerName }) => {
+    console.log("Set a game image");
+    const room = rooms[roomCode];
+    const player = room.players.find((p) => p.name === playerName);
+    console.log(room?.players);
+    console.log(player);
+
+    if (player) {
+      // room.image = image;
+      player.image = image;
+      room.players[playerName] = player;
+      rooms[roomCode] = room;
+      io.emit("roomsUpdated", Object.values(rooms));
+      // Notify all other players in the room
+      socket
+        .to(roomCode)
+        .emit("gameStateUpdated", { success: true, roomState: room });
+    }
   });
 
   // Handle disconnect

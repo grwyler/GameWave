@@ -3,14 +3,14 @@ import io from "socket.io-client";
 import { useRouter } from "next/router";
 import { useDispatch, useSelector } from "react-redux";
 import { selectRooms, setRooms } from "./redux/lobbySlice";
+import RoomList from "./RoomList";
+import { Button, Form } from "react-bootstrap";
 
-const socket = io("http://localhost:3001");
+const socket = io("http://192.168.0.4:3001");
 
 const Lobby = () => {
   const rooms = useSelector(selectRooms);
-  debugger;
   const [roomName, setRoomName] = useState("");
-  const [roomCode, setRoomCode] = useState("");
   const [playerName, setPlayerName] = useState("");
 
   const router = useRouter();
@@ -22,33 +22,10 @@ const Lobby = () => {
       dispatch(setRooms(updatedRooms));
     });
   }, [dispatch]);
-
-  const joinRoom = () => {
-    // Send request to server to join room
-    // Server will return room state and redirect to game interface
-    fetch("http://localhost:3001/joinRoom", {
-      method: "POST",
-      body: JSON.stringify({ roomCode, playerName }),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.success) {
-          localStorage.setItem("playerName", playerName);
-          router.push(`/game/${roomCode}`);
-        } else {
-          //// Display error message
-        }
-      });
-    socket.emit;
-  };
-
   const createRoom = () => {
     // // Send request to server to create new room
     // // Server will return room code and redirect to game interface
-    fetch("http://localhost:3001/createRoom", {
+    fetch("http://192.168.0.4:3001/createRoom", {
       method: "POST",
       body: JSON.stringify({ roomName, playerName }),
       headers: {
@@ -58,65 +35,59 @@ const Lobby = () => {
       .then((response) => response.json())
       .then((data) => {
         if (data.success) {
-          localStorage.setItem("playerName", playerName);
           router.push(`/game/${data.roomCode}`);
         } else {
           // Display error message
         }
       });
   };
-
+  const handleSetPlayerName = (name) => {
+    localStorage.setItem("playerName", name);
+    setPlayerName(name);
+  };
   return (
     <div>
-      <h1>Join a Game or Create a New Game</h1>
       <div>
-        <h2>Join a Game</h2>
-        <label htmlFor="roomCode">Enter Room Code:</label>
-        <input
+        <h2>Create a New Room</h2>
+        <Form.Control
           type="text"
-          id="roomCode"
-          value={roomCode}
-          onChange={(e) => setRoomCode(e.target.value)}
-        />
-        <label htmlFor="playerName">Enter Your Name:</label>
-        <input
-          type="text"
-          id="playerName"
-          value={playerName}
-          onChange={(e) => setPlayerName(e.target.value)}
-        />
-        <button onClick={joinRoom}>Join Room</button>
-      </div>
-      <div>
-        <h2>Create a New Game</h2>
-        <label htmlFor="roomName">Enter Room Name:</label>
-        <input
-          type="text"
-          id="roomName"
+          placeholder="Room Name"
           value={roomName}
           onChange={(e) => setRoomName(e.target.value)}
         />
-        <label htmlFor="playerName">Enter Your Name:</label>
-        <input
+        <Form.Control
           type="text"
-          id="playerName"
+          placeholder="Your Player Name"
+          className="mt-2"
           value={playerName}
-          onChange={(e) => setPlayerName(e.target.value)}
+          onChange={(e) => handleSetPlayerName(e.target.value)}
         />
-        <button onClick={createRoom}>Create Room</button>
+
+        <Button
+          variant="success mt-2"
+          disabled={roomName.length < 2 || playerName.length < 2}
+          onClick={createRoom}
+        >
+          Create Room
+          {/* <div>
+            <FontAwesomeIcon icon={faPlus} size="sm" className="fa fa-sm" />
+          </div> */}
+        </Button>
       </div>
       <h2>Available Rooms:</h2>
-      <ul>
-        {rooms.map(
-          (room: { code: string; name: string; players: string[] }) => (
-            <li key={room.code}>
-              <p>{room.name}</p>
-              <p>Players: {room.players.join(", ")}</p>
-              <p>Code: {room.code}</p>
-            </li>
-          )
-        )}
-      </ul>
+      <div>
+        <RoomList rooms={rooms} />
+      </div>
+
+      {/* <ul>
+        {rooms.map((room) => (
+          <li key={room.code}>
+            <p>{room.name}</p>
+            <p>Players: {room.players.join(", ")}</p>
+            <p>Code: {room.code}</p>
+          </li>
+        ))}
+      </ul> */}
     </div>
   );
 };
