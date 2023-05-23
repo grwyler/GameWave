@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const path = require("path");
+const { localUrl } = require("./localConfig");
 
 const port = 3001;
 
@@ -32,8 +33,8 @@ app.get("/", function (req, res) {
 // Serve the static files from the React app
 app.use(express.static(path.join(__dirname, "client/build")));
 
-const server = app.listen(port, "192.168.0.4", () => {
-  console.log(`Server running at http://192.168.0.4:${port}`);
+const server = app.listen(port, "192.168.0.178", () => {
+  console.log(`Server running at ${localUrl}${port}`);
 });
 
 const io = require("socket.io")(server, {

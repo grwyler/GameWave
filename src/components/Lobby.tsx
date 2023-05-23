@@ -5,8 +5,9 @@ import { useDispatch, useSelector } from "react-redux";
 import { selectRooms, setRooms } from "./redux/lobbySlice";
 import RoomList from "./RoomList";
 import { Button, Form } from "react-bootstrap";
+import { localUrl } from "../../localConfig";
 
-const socket = io("http://192.168.0.4:3001");
+const socket = io(`${localUrl}3001`);
 
 const Lobby = () => {
   const rooms = useSelector(selectRooms);
@@ -23,7 +24,7 @@ const Lobby = () => {
     });
   }, [dispatch]);
   const createRoom = () => {
-    fetch("http://192.168.0.4:3001/createRoom", {
+    fetch(`${localUrl}3001/createRoom`, {
       method: "POST",
       body: JSON.stringify({ roomName }),
       headers: {

@@ -2,12 +2,13 @@ import axios from "axios";
 import { io } from "socket.io-client";
 import { Configuration, OpenAIApi } from "openai";
 import { NextRouter } from "next/router";
+import { localUrl,openAiKey } from "./localConfig";
 const configuration = new Configuration({
   organization: "org-7I99Yz2EvJQXM3L3JeCjpgoa",
-  apiKey: "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",
+  apiKey: openAiKey,
 });
 
-const socket = io("http://192.168.0.4:3001");
+const socket = io(`${localUrl}3001`);
 export const joinRoom = (
   roomCode: string,
   player: { name: string; color: string },
@@ -16,7 +17,7 @@ export const joinRoom = (
   const body = JSON.stringify({ roomCode, player });
   // Send request to server to join room
   // Server will return room state and redirect to game interface
-  fetch("http://192.168.0.4:3001/joinRoom", {
+  fetch(`${localUrl}3001/joinRoom`, {
     method: "POST",
     body,
     headers: {
@@ -49,7 +50,7 @@ export async function getImageFromOpenAI(
     url: "https://api.openai.com/v1/images/generations",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer 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`,
+      Authorization: `Bearer ${openAiKey}`,
     },
     data: {
       prompt: prompt,

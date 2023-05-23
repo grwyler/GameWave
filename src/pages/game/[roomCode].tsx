@@ -8,8 +8,9 @@ import { getGamePrompt, getImageFromOpenAI } from "../../../utils";
 import { FaSpinner } from "react-icons/fa";
 import { BsArrowClockwise, BsCheckCircle } from "react-icons/bs";
 import axios from "axios";
+import { localUrl } from "../../../localConfig";
 
-const socket = io("http://192.168.0.4:3001");
+const socket = io(`${localUrl}3001`);
 
 // const speakText = async (text) => {
 //   if ("speechSynthesis" in window) {
