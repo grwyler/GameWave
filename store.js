@@ -1,6 +1,7 @@
 import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import lobby from "./src/components/redux/lobbySlice";
-const rootReducer = combineReducers({ lobby });
+import room from "./src/pages/game/redux/roomSlice";
+const rootReducer = combineReducers({ lobby, room });
 
 const store = configureStore({
   reducer: rootReducer,

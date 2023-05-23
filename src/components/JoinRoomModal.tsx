@@ -31,6 +31,11 @@ const JoinRoomModal = ({
   roomName,
   isJoiningRoom,
   setIsJoiningRoom,
+}: {
+  roomCode: string;
+  roomName: string;
+  isJoiningRoom: boolean;
+  setIsJoiningRoom: Function;
 }) => {
   const router = useRouter();
   const [playerName, setPlayerName] = useState("");
@@ -49,18 +54,18 @@ const JoinRoomModal = ({
     }
   }, []);
 
-  const handleSetPlayerName = (name) => {
+  const handleSetPlayerName = (name: string) => {
     setPlayerName(name);
     localStorage.setItem("playerName", name);
   };
 
-  const handleSetPlayerColor = (colorHEX) => {
+  const handleSetPlayerColor = (colorHEX: string) => {
     setPlayerColor(colorHEX);
     localStorage.setItem("playerColor", colorHEX);
   };
 
   const handleJoinRoom = () => {
-    joinRoom(roomCode, router);
+    joinRoom(roomCode, { name: playerName, color: playerColor }, router);
   };
   return (
     <Modal show={isJoiningRoom}>

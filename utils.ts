@@ -1,9 +1,19 @@
 import axios from "axios";
 import { io } from "socket.io-client";
+import { Configuration, OpenAIApi } from "openai";
+import { NextRouter } from "next/router";
+const configuration = new Configuration({
+  organization: "org-7I99Yz2EvJQXM3L3JeCjpgoa",
+  apiKey: "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",
+});
 
 const socket = io("http://192.168.0.4:3001");
-export const joinRoom = (roomCode, router) => {
-  const body = JSON.stringify({ roomCode });
+export const joinRoom = (
+  roomCode: string,
+  player: { name: string; color: string },
+  router: NextRouter
+) => {
+  const body = JSON.stringify({ roomCode, player });
   // Send request to server to join room
   // Server will return room state and redirect to game interface
   fetch("http://192.168.0.4:3001/joinRoom", {
@@ -23,161 +33,15 @@ export const joinRoom = (roomCode, router) => {
     });
   socket.emit;
 };
-export const adjectiveArray = [
-  "zany",
-  "quirky",
-  "whimsical",
-  "wacky",
-  "kooky",
-  "goofy",
-  "absurd",
-  "bizarre",
-  "eccentric",
-  "offbeat",
-  "outrageous",
-  "ridiculous",
-  "far-out",
-  "nutty",
-  "silly",
-  "loony",
-  "witty",
-  "daffy",
-  "flaky",
-  "weird",
-  "amazing",
-  "beautiful",
-  "brave",
-  "bright",
-  "calm",
-  "charming",
-  "clever",
-  "cool",
-  "courageous",
-  "creative",
-  "cunning",
-  "daring",
-  "delightful",
-  "eager",
-  "fearless",
-  "festive",
-  "friendly",
-  "funny",
-  "generous",
-  "gentle",
-  "glamorous",
-  "graceful",
-  "happy",
-  "healthy",
-  "helpful",
-  "honest",
-  "humorous",
-  "intelligent",
-  "jolly",
-  "joyful",
-  "kind",
-  "lovely",
-  "lucky",
-  "magnificent",
-  "mighty",
-  "neat",
-  "nice",
-  "optimistic",
-  "passionate",
-  "peaceful",
-  "polite",
-  "powerful",
-  "pretty",
-  "proud",
-  "quiet",
-  "silly",
-  "sincere",
-  "smart",
-  "strong",
-  "super",
-  "talented",
-  "trustworthy",
-  "wonderful",
-];
-
-export const nounArray = [
-  "old man",
-  "old lady",
-  "kids",
-  "men",
-  "women",
-  "girls",
-  "guy",
-  "man",
-  "woman",
-  "kid",
-  "baby",
-  "todler",
-  "apple",
-  "banana",
-  "car",
-  "dog",
-  "elephant",
-  "frog",
-  "guitar",
-  "house",
-  "igloo",
-  "jacket",
-  "kangaroo",
-  "lion",
-  "mountain",
-  "notebook",
-  "ocean",
-  "pencil",
-  "quilt",
-  "river",
-  "sailboat",
-  "table",
-  "umbrella",
-  "violin",
-  "waterfall",
-  "xylophone",
-  "yacht",
-  "zebra",
-  "ant",
-  "book",
-  "cat",
-  "desk",
-  "ear",
-  "fire",
-  "goat",
-  "hat",
-  "ice",
-  "jelly",
-  "kite",
-  "lemon",
-  "moon",
-  "nest",
-  "orange",
-  "pear",
-  "queen",
-  "rose",
-  "sun",
-  "tree",
-  "unicorn",
-  "vase",
-  "whale",
-  "xylophone",
-  "yarn",
-  "zeppelin",
-];
 
 export async function getImageFromOpenAI(
-  setImage: {
-    (value: React.SetStateAction<string>): void;
-    (arg0: any): void;
-  },
-  roomCode,
-  playerName,
-  userInput
+  setImage: Function,
+  setIsLoading: Function,
+  roomCode: string,
+  playerName: string,
+  userInput: string
 ) {
-  const randomAdjective =
-    adjectiveArray[Math.floor(Math.random() * adjectiveArray.length)];
-  const randomNoun = nounArray[Math.floor(Math.random() * nounArray.length)];
+  setIsLoading(true);
 
   const prompt = userInput;
   axios({
@@ -185,7 +49,7 @@ export async function getImageFromOpenAI(
     url: "https://api.openai.com/v1/images/generations",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer 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`,
+      Authorization: `Bearer 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`,
     },
     data: {
       prompt: prompt,
@@ -197,9 +61,32 @@ export async function getImageFromOpenAI(
     .then((response) => {
       const imageUrl = response.data.data[0].url;
       setImage(imageUrl);
+      setIsLoading(false);
       socket.emit("setImage", { image: imageUrl, roomCode, playerName });
     })
     .catch((error) => {
       console.error(error);
     });
+}
+
+export async function getGamePrompt() {
+  const prompt = "Create a hilarious meme prompt: ";
+  const openai = new OpenAIApi(configuration);
+  const completion = await openai.createCompletion({
+    model: "text-davinci-003",
+    prompt: prompt,
+    max_tokens: 2048,
+    temperature: 0.7, // Adjust the temperature to control the creativity of the response
+    top_p: 1,
+    n: 1,
+    stream: false,
+    logprobs: null,
+  });
+  let response = "";
+
+  if (completion.data.choices[0].text) {
+    response = completion.data.choices[0].text.trim();
+  }
+
+  return response;
 }

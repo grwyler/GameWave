@@ -9,11 +9,20 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static("public"));
+app.set("view engine", "ejs"); // Set EJS as the view engine
+
+app.get("/game/:roomCode", (req, res) => {
+  const { roomCode } = req.params;
+  const { creator } = req.query;
+
+  // Render the HTML file using the "game.ejs" template
+  res.render("game", { roomCode, creator });
+});
 
 // handle requests to the /game/:roomCode route
-app.get("/game/:roomCode", (req, res) => {
-  res.sendFile(path.join(__dirname, "client", "build", "index.html"));
-});
+// app.get("/game/:roomCode", (req, res) => {
+//   res.sendFile(path.join(__dirname, "client", "build", "index.html"));
+// });
 
 // Middleware that serves the index.html file
 app.get("/", function (req, res) {
@@ -45,7 +54,7 @@ const rooms = {};
 
 // Express endpoint to create a new game
 app.post("/createRoom", (req, res) => {
-  const { roomName, playerName } = req.body;
+  const { roomName } = req.body;
   let roomCode;
   do {
     roomCode = Math.random().toString(36).substring(2, 8);
@@ -53,12 +62,12 @@ app.post("/createRoom", (req, res) => {
   const room = {
     code: roomCode,
     name: roomName,
-    createdBy: playerName,
+    isVoting: false,
     players: [],
   };
+  res.json({ success: true, roomCode, room });
   rooms[roomCode] = room;
   io.emit("roomsUpdated", Object.values(rooms));
-  res.json({ success: true, roomCode });
 });
 
 // Express endpoint to join a game
@@ -72,6 +81,7 @@ app.post("/joinRoom", (req, res) => {
     // Return an error if the room code is not valid
     return res.status(400).json({ error: "Invalid room code" });
   }
+  // io.emit("joinRoom", { roomCode, player });
   res.json({ success: true });
 });
 
@@ -83,13 +93,11 @@ io.on("connection", (socket) => {
   socket.emit("roomsUpdated", Object.values(rooms));
 
   // Handle joining a room
-  socket.on("joinRoom", ({ roomCode, playerName }, callback) => {
+  socket.on("joinRoom", ({ roomCode, player }, callback) => {
     const room = rooms[roomCode];
     if (!room) {
       callback({ success: false, message: "Room not found", roomState: room });
-    } else if (
-      room.players.filter((player) => player.name === playerName).length > 0
-    ) {
+    } else if (room.players.filter((p) => p.name === player.name).length > 0) {
       callback({
         success: true,
         message: "Player alread in room",
@@ -97,8 +105,8 @@ io.on("connection", (socket) => {
       });
     } else {
       room.players.push({
-        name: playerName,
-        isLeader: room.createdBy === playerName,
+        name: player.name,
+        color: player.color,
       });
       rooms[roomCode] = room;
       io.emit("roomsUpdated", Object.values(rooms));
@@ -137,36 +145,66 @@ io.on("connection", (socket) => {
   });
 
   // Handle creating a new room
-  socket.on("createRoom", ({ roomName, playerName }, callback) => {
-    let roomCode;
-    do {
-      roomCode = Math.random().toString(36).substring(2, 8);
-    } while (rooms[roomCode]);
-    const room = {
-      code: roomCode,
-      name: roomName,
-      players: [playerName],
-    };
-    rooms[roomCode] = room;
-    io.emit("roomsUpdated", Object.values(rooms));
-    callback({ success: true, roomState: room });
-    socket.join(roomCode);
-    socket.emit("playerJoined", playerName);
+  socket.on("createRoom", ({ room, roomCode }) => {
     socket.to(roomCode).emit("gameStateUpdated", room);
   });
   socket.on("setImage", ({ image, roomCode, playerName }) => {
     console.log("Set a game image");
     const room = rooms[roomCode];
     const player = room.players.find((p) => p.name === playerName);
-    console.log(room?.players);
-    console.log(player);
-
     if (player) {
       // room.image = image;
       player.image = image;
       room.players[playerName] = player;
       rooms[roomCode] = room;
       io.emit("roomsUpdated", Object.values(rooms));
+      // Notify all other players in the room
+      socket
+        .to(roomCode)
+        .emit("gameStateUpdated", { success: true, roomState: room });
+    }
+  });
+  socket.on("submitImage", ({ playerName, roomCode }) => {
+    console.log("image submitted");
+    const room = rooms[roomCode];
+    const player = room.players.find((p) => p.name === playerName);
+    if (player) {
+      player.isSubmitted = true;
+      room.players[playerName] = player;
+      rooms[roomCode] = room;
+      io.emit("roomsUpdated", Object.values(rooms));
+      // Notify all other players in the room
+      socket
+        .to(roomCode)
+        .emit("gameStateUpdated", { success: true, roomState: room });
+    }
+  });
+
+  socket.on("cancelImage", ({ playerName, roomCode }) => {
+    console.log("image cancelled");
+    const room = rooms[roomCode];
+    const player = room.players.find((p) => p.name === playerName);
+    if (player) {
+      player.isSubmitted = false;
+      room.players[playerName] = player;
+      rooms[roomCode] = room;
+      io.emit("roomsUpdated", Object.values(rooms));
+      // Notify all other players in the room
+      socket
+        .to(roomCode)
+        .emit("gameStateUpdated", { success: true, roomState: room });
+    }
+  });
+
+  socket.on("isVoting", ({ roomCode, gamePrompt }) => {
+    const room = rooms[roomCode];
+
+    if (room) {
+      room.isVoting = true;
+      room.gamePrompt = gamePrompt;
+      rooms[roomCode] = room;
+      io.emit("roomsUpdated", Object.values(rooms));
+
       // Notify all other players in the room
       socket
         .to(roomCode)

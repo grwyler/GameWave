@@ -11,7 +11,7 @@ const socket = io("http://192.168.0.4:3001");
 const Lobby = () => {
   const rooms = useSelector(selectRooms);
   const [roomName, setRoomName] = useState("");
-  const [playerName, setPlayerName] = useState("");
+  const [playerName] = useState("Host");
 
   const router = useRouter();
   const dispatch = useDispatch();
@@ -23,11 +23,9 @@ const Lobby = () => {
     });
   }, [dispatch]);
   const createRoom = () => {
-    // // Send request to server to create new room
-    // // Server will return room code and redirect to game interface
     fetch("http://192.168.0.4:3001/createRoom", {
       method: "POST",
-      body: JSON.stringify({ roomName, playerName }),
+      body: JSON.stringify({ roomName }),
       headers: {
         "Content-Type": "application/json",
       },
@@ -35,16 +33,16 @@ const Lobby = () => {
       .then((response) => response.json())
       .then((data) => {
         if (data.success) {
-          router.push(`/game/${data.roomCode}`);
+          router.push(`/game/${data.roomCode}?creator=true`);
         } else {
           // Display error message
         }
       });
   };
-  const handleSetPlayerName = (name) => {
-    localStorage.setItem("playerName", name);
-    setPlayerName(name);
-  };
+  // const handleSetPlayerName = (name) => {
+  //   localStorage.setItem("playerName", name);
+  //   setPlayerName(name);
+  // };
   return (
     <div>
       <div>
@@ -52,16 +50,18 @@ const Lobby = () => {
         <Form.Control
           type="text"
           placeholder="Room Name"
+          autoFocus
           value={roomName}
           onChange={(e) => setRoomName(e.target.value)}
         />
-        <Form.Control
+        {/* <Form.Control
           type="text"
           placeholder="Your Player Name"
+          defaultValue="Host"
           className="mt-2"
           value={playerName}
           onChange={(e) => handleSetPlayerName(e.target.value)}
-        />
+        /> */}
 
         <Button
           variant="success mt-2"
@@ -74,10 +74,14 @@ const Lobby = () => {
           </div> */}
         </Button>
       </div>
-      <h2>Available Rooms:</h2>
-      <div>
-        <RoomList rooms={rooms} />
-      </div>
+      {rooms.length > 0 && (
+        <>
+          <h2>Available Rooms:</h2>
+          <div>
+            <RoomList rooms={rooms} />
+          </div>
+        </>
+      )}
 
       {/* <ul>
         {rooms.map((room) => (
